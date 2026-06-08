@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeePage — Le Horla</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0b08;--bg2:#151210;--bg3:#1e1a15;
+  --text:#e8e0d0;--text2:#a09080;
+  --accent:#c4956a;--accent2:#8b5e3c;
+  --border:#2a2420;
+}
+body{background:var(--bg);color:var(--text);font-family:'EB Garamond',serif;min-height:100vh}
+#reader-screen{display:flex;flex-direction:column;min-height:100vh}
+.top-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;font-family:'Inter',sans-serif;gap:12px;flex-wrap:wrap}
+.logo{font-size:20px;color:var(--accent);letter-spacing:3px;font-family:'EB Garamond',serif;cursor:pointer;user-select:none}
+.book-title{font-size:12px;color:var(--text2);letter-spacing:2px}
+.now-playing{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.now-playing-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;display:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.emotion-badge{font-size:10px;font-weight:500;padding:3px 9px;border-radius:20px;font-family:'Inter',sans-serif;letter-spacing:0.5px;display:none}
+.progress-bar{height:3px;background:var(--border)}
+.progress-fill{height:3px;background:var(--accent2);transition:width 0.5s ease}
+.reader-body{flex:1;display:flex;overflow:hidden}
+.sidebar{width:195px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;gap:5px}
+.sidebar-title{font-family:'Inter',sans-serif;font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.section-btn{background:none;border:none;padding:9px 10px;border-radius:6px;text-align:left;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;transition:all 0.15s;width:100%}
+.section-btn:hover{background:var(--bg3);color:var(--text)}
+.section-btn.active{background:var(--bg3);color:var(--accent)}
+.section-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.section-pages{font-size:10px;color:var(--text2);margin-left:auto;white-space:nowrap}
+.scroll-area{flex:1;overflow-y:auto;height:calc(100vh - 110px)}
+.text-area{padding:52px 64px;max-width:680px;margin:0 auto}
+.section-label{font-size:11px;color:var(--text2);font-family:'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;margin-bottom:36px}
+.page-number{font-family:'Inter',sans-serif;font-size:11px;color:var(--text2);letter-spacing:1px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.page-text{font-size:19px;line-height:1.95;color:var(--text)}
+.nav-controls{display:flex;align-items:center;justify-content:space-between;padding:18px 64px;border-top:1px solid var(--border);background:var(--bg2)}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:all 0.15s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.nav-btn:disabled{opacity:0.25;cursor:not-allowed}
+.page-indicator{font-size:13px;color:var(--text2);font-family:'Inter',sans-serif}
+.audio-transition{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0);pointer-events:none;transition:background 1.5s ease;z-index:100}
+.audio-transition.flash{background:rgba(0,0,0,0.35)}
+#feedback-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;transition:all 0.15s;white-space:nowrap}
+#feedback-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* MODAL FEEDBACK */
+#feedback-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+#feedback-modal.open{display:flex}
+.modal-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:580px;margin:auto}
+.modal-title{font-size:24px;color:var(--accent);margin-bottom:6px;font-weight:400}
+.modal-sub{font-size:13px;color:var(--text2);font-family:'Inter',sans-serif;margin-bottom:28px;line-height:1.6}
+.q-block{margin-bottom:22px}
+.q-label{font-family:'Inter',sans-serif;font-size:13px;color:var(--text);margin-bottom:8px;display:block;line-height:1.5}
+.q-hint{font-family:'Inter',sans-serif;font-size:11px;color:var(--text2);margin-top:4px}
+.q-stars{display:flex;gap:6px}
+.star-btn{background:none;border:none;font-size:24px;cursor:pointer;color:#2e2820;transition:color 0.1s;line-height:1;padding:2px 3px}
+.star-btn.lit{color:var(--accent)}
+textarea.q-input,input.q-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:11px 14px;font-family:'EB Garamond',serif;font-size:16px;outline:none;line-height:1.6}
+textarea.q-input{resize:vertical;min-height:80px}
+input.q-input{height:40px;font-family:'Inter',sans-serif;font-size:14px}
+textarea.q-input:focus,input.q-input:focus{border-color:var(--accent2)}
+.divider{height:1px;background:var(--border);margin:24px 0}
+.modal-actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+.submit-btn{background:var(--accent2);color:#fff;border:none;padding:11px 28px;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;transition:background 0.2s}
+.submit-btn:hover{background:var(--accent)}
+.cancel-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:11px 20px;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;cursor:pointer}
+
+/* MODAL RESULTS */
+#results-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.96);z-index:300;flex-direction:column;align-items:center;padding:40px 20px;overflow-y:auto}
+#results-modal.open{display:flex}
+.pwd-box{display:flex;flex-direction:column;align-items:center;gap:16px;margin:auto}
+.pwd-title{font-size:22px;color:var(--accent);font-family:'EB Garamond',serif}
+.pwd-sub{font-size:13px;color:var(--text2);font-family:'Inter',sans-serif}
+.pwd-input{background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:11px 20px;font-family:'Inter',sans-serif;font-size:15px;width:260px;text-align:center;outline:none}
+.pwd-input:focus{border-color:var(--accent2)}
+.pwd-btn{background:var(--accent2);color:#fff;border:none;padding:11px 28px;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;cursor:pointer}
+.pwd-error{font-family:'Inter',sans-serif;font-size:13px;color:#e24b4a;display:none}
+.results-content{display:none;width:100%;max-width:720px}
+.results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.results-title{font-size:26px;color:var(--accent);font-weight:400}
+.results-count{font-family:'Inter',sans-serif;font-size:13px;color:var(--text2);margin-top:4px}
+.close-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:8px 18px;border-radius:6px;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer}
+.result-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px}
+.result-meta{font-family:'Inter',sans-serif;font-size:10px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.result-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);gap:12px}
+.result-row:last-child{border-bottom:none}
+.result-q{font-family:'Inter',sans-serif;font-size:12px;color:var(--text2);flex:1;min-width:120px}
+.result-a{font-size:14px;color:var(--text);text-align:right;max-width:360px;word-break:break-word;line-height:1.5}
+.stars-display{color:var(--accent)}
+.no-feedback{font-family:'Inter',sans-serif;font-size:14px;color:var(--text2);text-align:center;padding:60px}
+</style>
+</head>
+<body>
+
+<div class="audio-transition" id="transition-overlay"></div>
+
+<div id="reader-screen">
+  <div class="top-bar">
+    <div class="logo" id="logo-btn" title="Double-clic pour accéder aux résultats">DeePage</div>
+    <div class="book-title">LE HORLA &nbsp;·&nbsp; GUY DE MAUPASSANT</div>
+    <div class="now-playing">
+      <div class="now-playing-dot" id="playing-dot"></div>
+      <span id="now-playing-text">—</span>
+      <span class="emotion-badge" id="emotion-badge"></span>
+    </div>
+    <button id="feedback-btn">Feedback</button>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="reader-body">
+    <div class="sidebar">
+      <div class="sidebar-title">Ambiances</div>
+      <div id="sidebar-sections"></div>
+    </div>
+    <div class="scroll-area" id="scroll-area">
+      <div class="text-area" id="text-area"></div>
+      <div class="nav-controls">
+        <button class="nav-btn" id="prev-btn">← Précédent</button>
+        <span class="page-indicator" id="page-indicator"></span>
+        <button class="nav-btn" id="next-btn">Suivant →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div id="feedback-modal">
+  <div class="modal-card">
+    <div class="modal-title">Feedback de lecture</div>
+    <div class="modal-sub">Tes réponses sont privées — seul Hugo peut les consulter.<br>Réponds honnêtement, chaque retour est précieux.</div>
+
+    <div class="q-block">
+      <label class="q-label">Ton prénom (optionnel)</label>
+      <input class="q-input" type="text" id="q-name" placeholder="Ex : Marie">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="q-block">
+      <label class="q-label">1 — L'immersion globale était-elle au rendez-vous ?</label>
+      <div class="q-stars" id="stars-1"></div>
+      <div class="q-hint">1 = nulle &nbsp;·&nbsp; 5 = totale</div>
+    </div>
+    <div class="q-block">
+      <label class="q-label">2 — La musique correspondait-elle aux émotions du texte ?</label>
+      <div class="q-stars" id="stars-2"></div>
+      <div class="q-hint">1 = non du tout &nbsp;·&nbsp; 5 = parfaitement</div>
+    </div>
+    <div class="q-block">
+      <label class="q-label">3 — La musique t'a-t-elle gêné(e) ou distrait(e) ?</label>
+      <div class="q-stars" id="stars-3"></div>
+      <div class="q-hint">1 = très souvent gêné(e) &nbsp;·&nbsp; 5 = jamais</div>
+    </div>
+    <div class="q-block">
+      <label class="q-label">4 — Les transitions entre ambiances étaient-elles bien placées ?</label>
+      <div class="q-stars" id="stars-4"></div>
+      <div class="q-hint">1 = mal placées &nbsp;·&nbsp; 5 = parfaites</div>
+    </div>
+    <div class="q-block">
+      <label class="q-label">5 — Le volume de la musique était-il adapté ?</label>
+      <div class="q-stars" id="stars-5"></div>
+      <div class="q-hint">1 = trop forte/faible &nbsp;·&nbsp; 5 = parfait</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="q-block">
+      <label class="q-label">6 — Un moment où la musique t'a particulièrement marqué(e) ?</label>
+      <textarea class="q-input" id="q-text1" placeholder="Décris le moment, la page, l'émotion ressentie..."></textarea>
+    </div>
+    <div class="q-block">
+      <label class="q-label">7 — Un moment où la musique ne collait pas ?</label>
+      <textarea class="q-input" id="q-text2" placeholder="Ex : page 5, la musique était trop intense..."></textarea>
+    </div>
+    <div class="q-block">
+      <label class="q-label">8 — Tes suggestions pour améliorer l'expérience ?</label>
+      <textarea class="q-input" id="q-text3" placeholder="Tout commentaire est bienvenu..."></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="q-block">
+      <label class="q-label">9 — Recommanderais-tu DeePage à quelqu'un qui aime lire ?</label>
+      <div class="q-stars" id="stars-6"></div>
+      <div class="q-hint">1 = non &nbsp;·&nbsp; 5 = absolument</div>
+    </div>
+    <div class="q-block">
+      <label class="q-label">10 — Note finale pour le concept DeePage</label>
+      <div class="q-stars" id="stars-7"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="submit-btn" id="submit-feedback">Envoyer mon feedback</button>
+      <button class="cancel-btn" id="cancel-feedback">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS MODAL -->
+<div id="results-modal">
+  <div class="pwd-box" id="pwd-box">
+    <div class="pwd-title">Résultats privés</div>
+    <div class="pwd-sub">Accès réservé — Hugo uniquement</div>
+    <input class="pwd-input" type="password" id="pwd-input" placeholder="Mot de passe">
+    <div class="pwd-error" id="pwd-error">Mot de passe incorrect</div>
+    <button class="pwd-btn" id="pwd-btn">Accéder</button>
+    <button class="cancel-btn" style="margin-top:6px" id="close-results-btn">Annuler</button>
+  </div>
+  <div class="results-content" id="results-content">
+    <div class="results-header">
+      <div>
+        <div class="results-title">Feedbacks DeePage</div>
+        <div class="results-count" id="results-count"></div>
+      </div>
+      <button class="close-btn" id="close-results-btn2">Fermer</button>
+    </div>
+    <div id="results-list"></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = 'hugo2024';
+
+const SECTIONS = [
+  {id:0, name:'Sérénité', pages:'1–3', emotion:'PAISIBLE', color:'#4a7c6b',
+   audio:'musique1.mp3',
+   pages_content:[
+    {n:1, text:`8 mai. — Quelle journée admirable ! J'ai passé toute la matinée étendu sur l'herbe, devant ma maison, sous l'énorme platane qui la couvre, l'abrite et l'ombrage tout entière. J'aime ce pays, et j'aime y vivre parce que j'y ai mes racines, ces profondes et délicates racines qui attachent un homme à la terre où sont nés et morts ses aïeux, qui l'attachent à ce qu'on pense et à ce qu'on mange, aux usages comme aux nourritures, aux locutions locales, aux intonations des paysans, aux odeurs du sol, des villages et de l'air lui-même.`},
+    {n:2, text:`J'aime ma maison où j'ai grandi. Je vois de mes fenêtres la Seine qui coule, le long de mon jardin, derrière la route, presque chez moi, la grande et large Seine, qui va de Rouen au Havre, couverte de bateaux qui passent.\n\nA gauche, là-bas, Rouen, la vaste ville aux toits bleus, sous le peuple pointu des clochers gothiques. Ils sont innombrables, frêles ou larges, dominés par la flèche de fonte de la cathédrale, et pleins de cloches qui sonnent dans l'air bleu des belles matinées, jetant jusqu'à moi leur doux et lointain bourdonnement de fer, leur chant d'airain que la brise m'apporte, tantôt plus fort et tantôt plus assourdi, suivant qu'elle s'éveille ou s'assoupit.`},
+    {n:3, text:`Comme il faisait bon ce matin ! Vers onze heures, un long convoi de navires, traînés par un remorqueur, gros comme une mouche, et qui râlait de peine en vomissant une fumée épaisse, défila devant ma grille.\n\nAprès deux frégates anglaises, dont le pavillon rouge ondoyait sur le ciel, venait un superbe trois-mâts brésilien, tout blanc, admirablement propre et luisant. Je le saluai, je ne sais pourquoi, tant ce navire me fit plaisir à voir.`}
+   ]},
+  {id:1, name:'Inquiétude', pages:'4–7', emotion:'TROUBLE', color:'#7a6b4a',
+   audio:'musique2.mp3',
+   pages_content:[
+    {n:4, text:`12 mai. — J'ai un peu de fièvre depuis quelques jours ; je me sens souffrant, ou plutôt je me sens triste.\n\nD'où viennent ces influences mystérieuses qui changent en découragement notre bonheur et notre confiance en détresse ? On dirait que l'air, l'air invisible est plein d'inconnuissables Puissances, dont nous subissons les voisinages mystérieux. Je m'éveille plein de gaieté, avec des envies de chanter dans la gorge. — Pourquoi ? — Je descends le long de l'eau ; et soudain, après une courte promenade, je rentre désolé, comme si quelque malheur m'attendait chez moi.`},
+    {n:5, text:`16 mai. — Je suis malade, décidément ! Je me portais si bien le mois dernier ! J'ai la fièvre, une fièvre atroce, ou plutôt un énervement fiévreux, qui rend mon âme aussi souffrante que mon corps. J'ai sans cesse cette sensation horrible d'un danger menaçant, cette appréhension d'un malheur qui vient ou de la mort qui approche, ce pressentiment qui est sans doute l'atteinte d'un mal encore inconnu, germant dans le sang et dans la chair.\n\nIl se lève, je monte dans ma chambre. Je ferme ma porte à double tour — j'ai peur... de quoi ?... Je ne redoutais rien jusqu'ici... j'ouvre mes armoires, je regarde sous mon lit ; j'écoute... j'écoute... quoi ?`},
+    {n:6, text:`Est-ce étrange qu'un simple malaise, un trouble dans la circulation peut-être, l'irritation d'un filet nerveux, un peu de congestion, une toute petite perturbation dans le fonctionnement si imparfait et si délicat de notre machine vivante, puisse faire un mélancolique du plus joyeux des hommes, et un poltron du plus brave ? Puis, je m'endors et je fais des rêves épouvantables.\n\nJe rentrai hier soir, après avoir marché toute la journée ; et, en passant devant ma fenêtre, j'aperçus dedans, dans la glace, mon visage... Je ne me reconnus pas.`},
+    {n:7, text:`25 mai. — Aucune crise, mais quelque chose de singulier s'est passé hier.\n\nJ'avais fermé toutes mes volets, tous mes rideaux, pour me trouver dans le noir absolu, et je voulais dormir enfin... Alors, à travers ces volets et ces rideaux épais, une lumière qui semblait venir de rien, une vague clarté passa sur moi, me frôla. Je me levai brusquement pour regarder et je ne trouvai rien. Toutes les ouvertures étaient bien closes. J'en fus troublé, et bientôt, je commençai à trembler sans raison, d'un froid qui me glaçait jusqu'aux os.`}
+   ]},
+  {id:2, name:'Mystère', pages:'8–12', emotion:'MYSTÉRIEUX', color:'#4a5a7a',
+   audio:'musique3.mp3',
+   pages_content:[
+    {n:8, text:`6 juin. — Je deviens fou. On a encore bu toute ma carafe cette nuit ; — ou plutôt, je l'ai bue moi-même sans le savoir.\n\nMais, est-ce moi ? Est-ce moi ? Qui serait-ce ? Qui ? Oh ! mon Dieu ! Je deviens fou ? Qui boira demain, si ce n'est moi ?\n\nJ'ai fait apporter une bouteille de bon vin de Bordeaux, une carafe de lait, du pain et des fraises. Je n'ai touché à rien.\n\nEt cependant on a bu l'eau et bu le lait ! On n'a pas touché ni au vin ni aux fraises.`},
+    {n:9, text:`10 juin. — Je viens de faire des expériences surprenantes.\n\nJ'ai bouché la goulot de ma carafe avec un tampon de ouate et recouvert le goulot en verre d'une mousseline et je l'ai suspendue au-dessus de ma table.\n\nPuis je me suis couché, en fermant bien mes volets, et en laissant ma porte grande ouverte.\n\nEt j'ai dormi jusqu'à sept heures du matin.\n\nOn avait bu l'eau de ma carafe ! Quelqu'un avait bu cette eau ! Qui ? Moi certes ; et pourtant je croyais bien ne l'avoir pas bue... et les plis de la mousseline n'avaient pas été défaits !`},
+    {n:10, text:`4 juillet. — Il est revenu, je l'ai senti, la nuit dernière. Mais je ne l'ai pas vu. Je dormais, et soudain je m'éveillai avec une terreur folle. Mon cœur battait. Je n'osais pas bouger. Tout à coup j'eus la certitude absolue qu'un être invisible était là, près de moi, me regardant, me touchant, m'envahissant.\n\nCette nuit encore je m'éveille vers deux heures. Une angoisse atroce me saisit. Et soudain je perçus qu'on lisait dans mon livre, qu'on tournait les feuillets. Mon livre était ouvert alors qu'il ne l'était pas.`},
+    {n:11, text:`16 août. — La Roumanie. Je lis dans une gazette de Bucharest : « Des faits étranges se passent dans plusieurs villages de la province Valachie. Les habitants abandonnent leurs demeures, fuyant, disent-ils, une sorte d'être vampire qui se repaît chaque nuit d'eux, les suce. »\n\nCette lecture me donna le vertige. Ces créatures qui errent dans l'ombre, êtres invisibles dont nous subissons les mystérieuses voisinages… Pourquoi pas ? Je sens maintenant que leur règne commence.`},
+    {n:12, text:`19 août. — Je le sais maintenant. Je l'ai vu !\n\nJ'étais assis à lire, ne songeant à rien ; et je sentis, je fus certain qu'on me lisait par-dessus l'épaule, qu'il était là, frôlant mon oreille. Je me dressai, en me tournant si vite que je faillis tomber. Il faisait clair comme en plein jour, et je ne me vis pas dans ma glace !... Elle était vide, claire, profonde, pleine de lumière ! Mon image n'était pas dedans... et j'étais en face. Je regardais cet objet grand comme moi et je ne me voyais pas.`}
+   ]},
+  {id:3, name:'Terreur', pages:'13–17', emotion:'TERREUR', color:'#7a2a2a',
+   audio:'musique4.mp3',
+   pages_content:[
+    {n:13, text:`25 août. — Le Horla ! Je viens de le nommer, et en prononçant ce mot je frissonne. Le Horla — oui, c'est lui, le nouveau maître ! Il m'a dit son nom. Et je sus aussitôt qu'il était là. Il est venu. Quelque chose de plus fort que moi l'a prononcé à travers mes lèvres, un nom venu de nulle part, forgé par ce qui me possède et me dévore.\n\nIl me tient, je ne peux plus m'en aller. Je suis prisonnier de cette chose invisible.`},
+    {n:14, text:`Le Horla a maintenant une forme dans mon esprit. Il n'est pas un fantôme, pas un démon des vieilles légendes. C'est quelque chose de nouveau, d'apparu sur terre, quelque être d'une autre nature, une autre race d'êtres, dont le règne commence.\n\nComme l'homme a soumis le cheval et le bœuf, comme nous avons asservi toutes les créatures vivantes, voilà qu'à notre tour quelque chose veut nous faire ses serviteurs. Et nous sommes si faibles, si désarmés, si ignorants, si petits nous autres, sur ce grain de boue.`},
+    {n:15, text:`Nuit du 6 au 7 septembre. — J'ai rêvé que j'étranglais le Horla. Et je me suis réveillé avec mes deux mains crispées sur ma gorge à moi, que j'étranglais moi-même.\n\nJe ne peux plus dormir. Il est là, rôdant, invisible, qui me surveille, qui me pénètre, qui me domine. Je sens son regard sur moi comme un feu. Je cours, il court. Il est partout, dedans moi, dehors. Je ne sais plus qui est lui, qui est moi.`},
+    {n:16, text:`10 septembre. — J'ai brûlé ma maison.\n\nJ'avais barricadé toutes les portes et les fenêtres. J'avais mis du feu aux quatre coins du rez-de-chaussée, et j'attendais sur la route pour voir si le Horla brûlait avec elle.\n\nEt soudain les domestiques vinrent en criant. Deux d'entre eux ont péri. Ils sont morts par moi. Dieu leur pardonne. Mais le Horla était-il mort aussi ? Non, non, j'en suis sûr, il n'est pas mort. Alors... alors... il va donc falloir que je me tue moi aussi.`},
+    {n:17, text:`Il est mort ? Son corps peut-il périr par les moyens qui tuent les corps humains ?\n\nS'il n'est pas mort... il va donc falloir que je me tue, moi !...\n\n— FIN —`}
+   ]}
+];
+
+// ─── AUDIO ENGINE ───────────────────────────────────────
+let audioPlayers = {};
+let currentAudio = null;
+let currentSectionIdx = 0;
+let currentPageIdx = 0;
+let started = false;
+
+function initAudio() {
+  SECTIONS.forEach(s => {
+    const a = new Audio(s.audio);
+    a.loop = false;
+    a.volume = 0;
+    audioPlayers[s.id] = a;
+    setupLoopFade(a, s.id);
+  });
+}
+
+function setupLoopFade(audio, id) {
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    const remaining = audio.duration - audio.currentTime;
+    if (remaining < 4 && remaining > 0.1 && audio.volume > 0.05 && !audio._fadingOut) {
+      audio._fadingOut = true;
+      const startVol = audio.volume;
+      const steps = 40, interval = (remaining * 1000) / steps;
+      let s = 0;
+      const t = setInterval(() => {
+        s++;
+        audio.volume = Math.max(0, startVol * (1 - s / steps));
+        if (s >= steps) {
+          clearInterval(t);
+          audio.currentTime = 0;
+          audio._fadingOut = false;
+          audio.play().catch(() => {});
+          fadeIn(audio, 0.65, 3000);
+        }
+      }, interval);
+    }
+  });
+}
+
+function fadeIn(audio, targetVol = 0.65, ms = 3000) {
+  audio.volume = 0;
+  const steps = 60, interval = ms / steps;
+  let s = 0;
+  const t = setInterval(() => {
+    s++;
+    audio.volume = Math.min(targetVol, targetVol * (s / steps));
+    if (s >= steps) clearInterval(t);
+  }, interval);
+}
+
+function fadeOut(audio, cb, ms = 2000) {
+  const startVol = audio.volume;
+  const steps = 40, interval = ms / steps;
+  let s = 0;
+  const t = setInterval(() => {
+    s++;
+    audio.volume = Math.max(0, startVol * (1 - s / steps));
+    if (s >= steps) {
+      clearInterval(t);
+      audio.pause();
+      audio.currentTime = 0;
+      audio._fadingOut = false;
+      if (cb) cb();
+    }
+  }, interval);
+}
+
+function playSection(sIdx, restart = false) {
+  const section = SECTIONS[sIdx];
+  const newAudio = audioPlayers[sIdx];
+  const overlay = document.getElementById('transition-overlay');
+  overlay.classList.add('flash');
+  setTimeout(() => overlay.classList.remove('flash'), 1500);
+
+  const doPlay = () => {
+    if (!newAudio) return;
+    newAudio.currentTime = 0;
+    newAudio._fadingOut = false;
+    newAudio.play().catch(() => {});
+    fadeIn(newAudio, 0.65, 3000);
+    currentAudio = newAudio;
+    document.getElementById('playing-dot').style.display = 'block';
+    document.getElementById('now-playing-text').textContent = section.name + ' — ' + section.emotion;
+    const badge = document.getElementById('emotion-badge');
+    badge.style.display = 'inline-block';
+    badge.textContent = section.emotion;
+    badge.style.background = section.color + '33';
+    badge.style.color = section.color;
+  };
+
+  if (currentAudio && currentAudio !== newAudio) {
+    fadeOut(currentAudio, doPlay, 2000);
+  } else if (!currentAudio) {
+    doPlay();
+  } else if (restart) {
+    fadeOut(currentAudio, doPlay, 1200);
+  }
+}
+
+// ─── RENDER ─────────────────────────────────────────────
+function buildSidebar() {
+  const sb = document.getElementById('sidebar-sections');
+  SECTIONS.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'section-btn' + (i === 0 ? ' active' : '');
+    btn.id = `sec-btn-${i}`;
+    btn.innerHTML = `<div class="section-dot" style="background:${s.color}"></div><span>${s.name}</span><span class="section-pages">${s.pages}</span>`;
+    btn.onclick = () => {
+      const goBack = i < currentSectionIdx;
+      renderSection(i, 0);
+      playSection(i, goBack);
+    };
+    sb.appendChild(btn);
+  });
+}
+
+function renderSection(sIdx, pIdx) {
+  const section = SECTIONS[sIdx];
+  const page = section.pages_content[pIdx];
+  currentSectionIdx = sIdx;
+  currentPageIdx = pIdx;
+
+  document.querySelectorAll('.section-btn').forEach((b, i) => b.classList.toggle('active', i === sIdx));
+
+  const ta = document.getElementById('text-area');
+  ta.innerHTML = `
+    <div class="section-label">${section.emotion} · ${section.name.toUpperCase()}</div>
+    <div class="page-number">Page ${page.n}</div>
+    <div class="page-text">${page.text.replace(/\n/g, '<br><br>')}</div>
+  `;
+  document.getElementById('scroll-area').scrollTop = 0;
+
+  const totalPages = SECTIONS.reduce((a, s) => a + s.pages_content.length, 0);
+  const globalIdx = SECTIONS.slice(0, sIdx).reduce((a, s) => a + s.pages_content.length, 0) + pIdx;
+  document.getElementById('progress-fill').style.width = Math.round((globalIdx + 1) / totalPages * 100) + '%';
+  document.getElementById('page-indicator').textContent = `Page ${page.n} / ${totalPages}`;
+  document.getElementById('prev-btn').disabled = sIdx === 0 && pIdx === 0;
+  document.getElementById('next-btn').disabled = sIdx === SECTIONS.length - 1 && pIdx === section.pages_content.length - 1;
+}
+
+function navigate(dir) {
+  const section = SECTIONS[currentSectionIdx];
+  let sIdx = currentSectionIdx, pIdx = currentPageIdx + dir;
+  if (pIdx < 0) { sIdx--; if (sIdx < 0) return; pIdx = SECTIONS[sIdx].pages_content.length - 1; }
+  else if (pIdx >= section.pages_content.length) { sIdx++; if (sIdx >= SECTIONS.length) return; pIdx = 0; }
+  const changeMusic = sIdx !== currentSectionIdx;
+  const goBack = sIdx < currentSectionIdx;
+  renderSection(sIdx, pIdx);
+  if (changeMusic) playSection(sIdx, goBack);
+}
+
+// ─── FEEDBACK ───────────────────────────────────────────
+let ratings = {1:0,2:0,3:0,4:0,5:0,6:0,7:0};
+let allFeedbacks = JSON.parse(localStorage.getItem('deepage_feedbacks') || '[]');
+
+function buildStars(containerId, key) {
+  const c = document.getElementById(containerId);
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'star-btn';
+    btn.textContent = '★';
+    btn.type = 'button';
+    btn.onclick = () => {
+      ratings[key] = i;
+      c.querySelectorAll('.star-btn').forEach((b, idx) => b.classList.toggle('lit', idx < i));
+    };
+    c.appendChild(btn);
+  }
+}
+
+function submitFeedback() {
+  const feedback = {
+    date: new Date().toLocaleString('fr-FR'),
+    nom: document.getElementById('q-name').value.trim() || 'Anonyme',
+    immersion: ratings[1],
+    correspondance: ratings[2],
+    nonGene: ratings[3],
+    transitions: ratings[4],
+    volume: ratings[5],
+    recommande: ratings[6],
+    noteFinale: ratings[7],
+    momentPositif: document.getElementById('q-text1').value.trim(),
+    momentNegatif: document.getElementById('q-text2').value.trim(),
+    suggestions: document.getElementById('q-text3').value.trim(),
+  };
+  allFeedbacks.push(feedback);
+  localStorage.setItem('deepage_feedbacks', JSON.stringify(allFeedbacks));
+  document.getElementById('feedback-modal').classList.remove('open');
+  ratings = {1:0,2:0,3:0,4:0,5:0,6:0,7:0};
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('lit'));
+  ['q-name','q-text1','q-text2','q-text3'].forEach(id => document.getElementById(id).value = '');
+  alert('Merci ! Ton feedback a bien été enregistré.');
+}
+
+// ─── RESULTS ────────────────────────────────────────────
+function showResults() {
+  document.getElementById('pwd-box').style.display = 'flex';
+  document.getElementById('results-content').style.display = 'none';
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('pwd-error').style.display = 'none';
+  document.getElementById('results-modal').classList.add('open');
+}
+
+function closeResults() {
+  document.getElementById('results-modal').classList.remove('open');
+}
+
+function checkPassword() {
+  if (document.getElementById('pwd-input').value === ADMIN_PASSWORD) {
+    document.getElementById('pwd-box').style.display = 'none';
+    document.getElementById('results-content').style.display = 'block';
+    renderResults();
+  } else {
+    document.getElementById('pwd-error').style.display = 'block';
+  }
+}
+
+function renderResults() {
+  const list = document.getElementById('results-list');
+  const count = document.getElementById('results-count');
+  allFeedbacks = JSON.parse(localStorage.getItem('deepage_feedbacks') || '[]');
+  count.textContent = allFeedbacks.length + ' feedback' + (allFeedbacks.length > 1 ? 's reçus' : ' reçu');
+  list.innerHTML = '';
+  if (allFeedbacks.length === 0) {
+    list.innerHTML = '<div class="no-feedback">Aucun feedback pour l\'instant.</div>';
+    return;
+  }
+  const stars = n => n ? '★'.repeat(n) + '☆'.repeat(5 - n) + ` (${n}/5)` : '—';
+  [...allFeedbacks].reverse().forEach((f, i) => {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <div class="result-meta">${f.nom} — ${f.date}</div>
+      <div class="result-row"><span class="result-q">Immersion globale</span><span class="result-a stars-display">${stars(f.immersion)}</span></div>
+      <div class="result-row"><span class="result-q">Musique correspondante</span><span class="result-a stars-display">${stars(f.correspondance)}</span></div>
+      <div class="result-row"><span class="result-q">Non gênant(e)</span><span class="result-a stars-display">${stars(f.nonGene)}</span></div>
+      <div class="result-row"><span class="result-q">Transitions</span><span class="result-a stars-display">${stars(f.transitions)}</span></div>
+      <div class="result-row"><span class="result-q">Volume</span><span class="result-a stars-display">${stars(f.volume)}</span></div>
+      <div class="result-row"><span class="result-q">Recommandation</span><span class="result-a stars-display">${stars(f.recommande)}</span></div>
+      <div class="result-row"><span class="result-q">Note finale</span><span class="result-a stars-display">${stars(f.noteFinale)}</span></div>
+      ${f.momentPositif ? `<div class="result-row"><span class="result-q">Moment fort</span><span class="result-a">${f.momentPositif}</span></div>` : ''}
+      ${f.momentNegatif ? `<div class="result-row"><span class="result-q">Moment qui ne collait pas</span><span class="result-a">${f.momentNegatif}</span></div>` : ''}
+      ${f.suggestions ? `<div class="result-row"><span class="result-q">Suggestions</span><span class="result-a">${f.suggestions}</span></div>` : ''}
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────
+buildSidebar();
+buildStars('stars-1',1); buildStars('stars-2',2); buildStars('stars-3',3);
+buildStars('stars-4',4); buildStars('stars-5',5); buildStars('stars-6',6); buildStars('stars-7',7);
+renderSection(0, 0);
+initAudio();
+
+document.getElementById('prev-btn').onclick = () => navigate(-1);
+document.getElementById('next-btn').onclick = () => navigate(1);
+document.getElementById('feedback-btn').onclick = () => document.getElementById('feedback-modal').classList.add('open');
+document.getElementById('cancel-feedback').onclick = () => document.getElementById('feedback-modal').classList.remove('open');
+document.getElementById('submit-feedback').onclick = submitFeedback;
+document.getElementById('pwd-btn').onclick = checkPassword;
+document.getElementById('close-results-btn').onclick = closeResults;
+document.getElementById('close-results-btn2').onclick = closeResults;
+document.getElementById('pwd-input').onkeydown = e => { if (e.key === 'Enter') checkPassword(); };
+
+let logoClicks = 0;
+document.getElementById('logo-btn').onclick = () => {
+  logoClicks++;
+  if (logoClicks >= 2) { logoClicks = 0; showResults(); }
+  setTimeout(() => logoClicks = 0, 500);
+};
+
+document.addEventListener('keydown', e => {
+  const fbOpen = document.getElementById('feedback-modal').classList.contains('open');
+  const rsOpen = document.getElementById('results-modal').classList.contains('open');
+  if (!fbOpen && !rsOpen) {
+    if (e.key === 'ArrowRight') navigate(1);
+    if (e.key === 'ArrowLeft') navigate(-1);
+  }
+});
+
+// Lance la musique au premier clic
+document.addEventListener('click', function startAudio() {
+  if (!started) { started = true; playSection(0); }
+}, { once: false });
+</script>
+</body>
+</html>
